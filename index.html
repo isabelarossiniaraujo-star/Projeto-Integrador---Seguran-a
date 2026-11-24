@@ -1,176 +1,90 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Dados</title>
-    <style>
-* {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+// Seleciona os elementos do HTML
+const form = document.getElementById('form-registro');
+const inputNome = document.getElementById('nome');
+const selectCategoria = document.getElementById('categoria');
+const muralCards = document.getElementById('mural-cards');
 
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            background-color: #f4f6f9;
-            color: #222;
-            line-height: 1.5;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+if (!form || !inputNome || !selectCategoria || !muralCards) {
+    throw new Error('Elemento não encontrado: confira os IDs no HTML.');
+}
 
-        header {
-            background-color: #1e293b;
-            color: #ffffff;
-            padding: 20px;
-            text-align: center;
-        }
+const STORAGE_KEY = 'registros';
 
-        main {
-            flex: 1;
-            width: 100%;
-            max-width: 720px;
-            margin: 30px auto;
-            padding: 0 16px;
-        }
+// Carrega os registros salvos com segurança
+function carregarRegistros() {
+    try {
+        const dados = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return Array.isArray(dados) ? dados : [];
+    } catch {
+        return [];
+    }
+}
 
-        section {
-            background-color: #ffffff;
-            padding: 24px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            margin-bottom: 24px;
-        }
+function salvarRegistros() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(registros));
+    } catch (erro) {
+        console.error('Não foi possível salvar:', erro);
+    }
+}
 
-        h2 {
-            margin-bottom: 16px;
-            font-size: 1.25rem;
-            color: #0f172a;
-        }
+let registros = carregarRegistros();
 
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-        }
+// Cria um cartão sem usar innerHTML (evita XSS)
+function criarCard(registro, indice) {
+    const card = document.createElement('div');
+    card.classList.add('card');
 
-        .campo {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
+    const titulo = document.createElement('h3');
+    titulo.textContent = registro.nome;
 
-        label {
-            font-weight: bold;
-            font-size: 0.95rem;
-        }
+    const categoria = document.createElement('p');
+    const rotulo = document.createElement('strong');
+    rotulo.textContent = 'Categoria: ';
+    categoria.append(rotulo, registro.categoria);
 
-        input,
-        select {
-            padding: 10px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 1rem;
-            background-color: #fff;
-        }
+    const btnExcluir = document.createElement('button');
+    btnExcluir.type = 'button';
+    btnExcluir.textContent = 'Excluir';
+    btnExcluir.addEventListener('click', () => removerRegistro(indice));
 
-        input:focus,
-        select:focus {
-            outline: none;
-            border-color: #2563eb;
-        }
+    card.append(titulo, categoria, btnExcluir);
+    return card;
+}
 
-        button {
-            padding: 12px 18px;
-            background-color: #2563eb;
-            color: #ffffff;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
+// Renderiza os cartões no mural
+function atualizarMural() {
+    muralCards.replaceChildren(
+        ...registros.map((registro, indice) => criarCard(registro, indice))
+    );
+}
 
-        button:hover {
-            background-color: #1d4ed8;
-        }
+function removerRegistro(indice) {
+    registros.splice(indice, 1);
+    salvarRegistros();
+    atualizarMural();
+}
 
-        #mural-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 14px;
-        }
+// Envio do formulário
+form.addEventListener('submit', (event) => {
+    event.preventDefault();
 
-        .card {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-left: 4px solid #2563eb;
-            border-radius: 6px;
-            padding: 14px;
-        }
+    const nome = inputNome.value.trim();
+    if (!nome) {
+        inputNome.focus();
+        return;
+    }
 
-        .card h3 {
-            font-size: 1rem;
-            margin-bottom: 8px;
-            color: #0f172a;
-        }
+    registros.push({
+        nome,
+        categoria: selectCategoria.value
+    });
 
-        .card p {
-            font-size: 0.92rem;
-            margin-bottom: 4px;
-        }
+    salvarRegistros();
+    atualizarMural();
+    form.reset();
+    inputNome.focus();
+});
 
-        footer {
-            background-color: #1e293b;
-            color: #cbd5e1;
-            text-align: center;
-            padding: 16px;
-            font-size: 0.9rem;
-        }
-    </style>
-</head>
-<body>
-
-    <header>
-        <h1>Título / Logo do Projeto</h1>
-    </header>
-
-    <main>
-        <section>
-            <h2>Formulário de Entrada</h2>
-            <form id="form-registro">
-                <div class="campo">
-                    <label for="nome">Campo Nome</label>
-                    <input type="text" id="nome" placeholder="Digite o nome" required>
-                </div>
-
-                <div class="campo">
-                    <label for="categoria">Seleção Categoria</label>
-                    <select id="categoria" required>
-                        <option value="">Selecione uma categoria...</option>
-                        <option value="Cyberbulling">Cyberbulling </option>
-                        <option value="Bullying Verbal">Bullying Verbal</option>
-                        <option value="Bullying Psicológico">Bullying Psicológico</option>
-                    </select>
-                </div>
-
-                <button type="submit">Salvar Registro</button>
-            </form>
-        </section>
-
-        <section>
-            <h2>Mural de Cards</h2>
-            <div id="mural-cards"></div>
-        </section>
-    </main>
-
-    <footer>
-        <p>Desenvolvido pela equipe - Dia 1</p>
-    </footer>
-
-    <script src="script.js"></script>
-</body>
-</html>
+// Exibe os cartões ao carregar a página
+atualizarMural();
